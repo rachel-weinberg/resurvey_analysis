@@ -13,6 +13,8 @@ Conda environments referenced in the scripts:
 contains phyluce-1.7.2 and dependencies
 2. fastp
 contains fastp 0.22.0
+3. seq_analysis
+contains vcftools 0.1.7
 
 
 

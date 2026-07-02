@@ -1,0 +1,30 @@
+This workflow uses the following tools:
+1. vcftools 0.1.17
+2. plink 1.9
+3. admixture 1.3.0
+
+All R packages are loaded in the corresponding R scripts
+
+1. Calculate Tajima's D, Fst, heterozygosity, and nucleotide diversity using vcftools. Requires sample_list.txt (all samples) and pop_list.txt (sample IDs for each pop) be present in the analysis folder
+
+```
+vcftools_analyses_resurvey_uces.sh <vcf_file> <pop_list.txt>
+```
+
+2. The bulk of the anlaysis is performed in the following script, which contains code to import and analyze vcftools outputs, calculate PCA, isolation by distance, allele sharing distances, heterozygosity, and heirarchical variance components (hierfstat)
+
+```
+Resurvey_UCE_popgen_analysis.R
+```
+
+3. Admixture cross-validation and supervised analysis
+```
+convert_to_plink_run_admixture.sh <vcf_file> 
+```
+
+4. Additional code to generate maps, behavioral plots, and admixture barplots
+
+```
+behavior_maps_and_plots.R
+```
+
