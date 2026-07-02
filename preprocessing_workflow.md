@@ -17,6 +17,8 @@ contains fastp 0.22.0
 
 
 Workflow overview:
+# Part 1: Read cleaning, assembly, and alignment
+
 1. Make config for illumiprocessor with sample names, adapter seqs for raw reads. conf CANNOT be an RTF file, need to download blank .conf file used in previous illumiprocessor script and overwrite. Some sample name formats from GSL are incompatible with illumiprocessor due to underscores and may need to be manually renamed to fit the following convention: <site><year><two digit sample number>
 csv headers must be ordered as follows: plate	well	i7	i5	oligoname	libraryname
 
@@ -50,6 +52,69 @@ phyluce_match_contigs_get_counts.sh
 ```
 phyluce_get_ref_fastas.sh
 ```
+
+6. Align fastp cleaned reads to the reference sample. Samtools is used in the same script to add read groups, mark duplicates, and fix mate pairs. Corrected and sorted bam files have the suffix fmrgmd_uces.sorted.bam. Finally, samtools is used to calculate depth and coverage for all alignments.
+
+The script is designed to be run in parallel by submitting as an array to SLURM. Sample IDs must be located in sample_list.txt
+
+```
+line=$(sed -n "${SLURM_ARRAY_TASK_ID}p" sample_list.txt)
+
+bwa_aln_fmrgmd_stats.sh "$line"
+```
+
+# Part 2: Variant calling and filtering
+
+7. Call variants jointly for each population. Populations are:
+LSC_s1 (LSC t1)
+LSC_s2 (LSC t2)
+LH_s1 (LH t1)
+LH_s2 (LH t2)
+SK_s1 (SK t1)
+SK_s2 (SK t2)
+MC76 (Mendocino County historical samples)
+SBCo64 (San Benito County historical samples)
+
+Takes as first argument text file with list of sorted, dupmarked bamfiles for each population
+
+```
+bcftools_pileup_call.sh <pop_bamlist.txt>
+```
+
+
+
+8a. Remove individuals with >10% missing sites, filter vcf by quality, depth, and MAF, then normalize and index the resulting vcfs. Needs to be run for each vcf.
+
+```
+vcftools filter_qual_depth_miss.sh <vcf> <refrence>
+```
+
+8b. Remove transition sites from t1 samples not present in t2 samples to limit potential bias from PMD. Run for each pop, then rerun for historical samples (MC and SBCo) using all remaining t1 and t2 variants in merged vcf to allow for ALL contemporary transitions in historical samples
+
+```
+filter_transitions_not_present_in_ref.sh <t1_vcf> <t2_vcf> <popname> <outfile>
+```
+
+8c. Zip, index, and merge filtered vcfs
+
+```
+bcftools_zip_index_merge.sh <list_of_vcfs_to_merge.txt> <output.vcf>
+```
+
+9. Filter for allele balance then remove sites with missing data using vcfR
+
+```
+vcfR_filter_ab_miss.R
+```
+
+10. LD-prune merged vcfs using cutoff of r2 < 0.3
+
+```
+vcftools_ld_prune.sh
+```
+
+
+The resulting ld-pruned vcfs are used as input for all the following analyses in Part 2 (population genetics analyses)
 
 
 
