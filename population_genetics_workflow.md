@@ -17,12 +17,18 @@ vcftools_analyses_resurvey_uces.sh <vcf_file> <pop_list.txt>
 Resurvey_UCE_popgen_analysis.R
 ```
 
-3. Admixture cross-validation and supervised analysis
+3. Admixture cross-validation and unsupervised analysis
 ```
 convert_to_plink_run_admixture.sh <vcf_file> 
 ```
 
-4. Additional code to generate maps, behavioral plots, and admixture barplots
+4. Code to plot CV error for k=1-5 and admixture results for k=3 using 2 individuals per population
+
+```
+admixture_plots.R
+```
+
+5. Additional code to generate maps and plots of behavioral data b
 
 ```
 behavior_maps_and_plots.R
