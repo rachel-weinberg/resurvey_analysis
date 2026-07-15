@@ -26,12 +26,9 @@ pacman::p_load(
   ggpubr,
   rstatix,
   geodist,
-  tidymodels,
   reshape2,
-  related,
   viridis,
-  gplots,
-  admixtools
+  gplots
 )
 
 #Assumes working directory is the UCE_analysis project root
