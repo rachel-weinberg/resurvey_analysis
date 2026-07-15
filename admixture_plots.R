@@ -102,8 +102,9 @@ s2_order <- c(
   "WL22"
 )
 
+fam_path <- "path/to/admixture_results/all_samples_100p.fam" #Replace with filepath for plink fam file
 sample_names <- read_table(
-  "/Users/rachelweinberg/Documents/UCB/lab_stuff/LhumGenomic/UCEanalysis/admixture_results/admixture_results_abfiltered_100p/plink-files-100p/all_samples_100p.fam",
+  fam_path,
   col_names = FALSE
 )
 

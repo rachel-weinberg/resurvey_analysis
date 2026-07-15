@@ -8,7 +8,7 @@ tabix -p vcf ${vcf}.gz
 #remove multiallelic sites (should already be removed but just in case)
 bcftools view -m2 -M2 -v snps ${vcf}.gz -Ov -o uces_filtered_biallelic.vcf
 
-conda deactivate seq_analysis
+conda deactivate
 conda activate plink-1.9
 
 #set bed prefix
@@ -25,8 +25,9 @@ mv temp.bim ${output_prefix}.bim
 
 
 #Cross-validation
+#--seed fixes ADMIXTURE's random EM initialization so CV error and Q-matrices are reproducible across runs
 for k in 1 2 3 4 5 10 20;
-do admixture --cv ${output_prefix}.bed $k | tee log${k}.out; done
+do admixture --cv --seed=42 ${output_prefix}.bed $k | tee log${k}.out; done
 
 for i in log*.out;
 do cat $i | grep 'CV error'; done

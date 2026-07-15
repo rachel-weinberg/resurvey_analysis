@@ -14,7 +14,7 @@ contains phyluce-1.7.2 and dependencies
 2. fastp
 contains fastp 0.22.0
 3. seq_analysis
-contains vcftools 0.1.7
+contains vcftools 0.1.17
 
 
 
@@ -62,7 +62,7 @@ The script is designed to be run in parallel by submitting as an array to SLURM.
 ```
 line=$(sed -n "${SLURM_ARRAY_TASK_ID}p" sample_list.txt)
 
-bwa_aln_fmrgmd_stats.sh "$line"
+bwa_aln_fmrgmd_stats.sh "$line" cds_matching_uces.fasta
 ```
 
 # Part 2: Variant calling and filtering
@@ -88,13 +88,13 @@ bcftools_pileup_call.sh <pop_bamlist.txt>
 8a. Remove individuals with >10% missing sites, filter vcf by quality, depth, and MAF, then normalize and index the resulting vcfs. Needs to be run for each vcf.
 
 ```
-vcftools filter_qual_depth_miss.sh <vcf> <refrence>
+vcftools_filter_qual_depth_miss.sh <vcf> <refrence>
 ```
 
 8b. Remove transition sites from t1 samples not present in t2 samples to limit potential bias from PMD. Run for each pop, then rerun for historical samples (MC and SBCo) using all remaining t1 and t2 variants in merged vcf to allow for ALL contemporary transitions in historical samples
 
 ```
-filter_transitions_not_present_in_ref.sh <t1_vcf> <t2_vcf> <popname> <outfile>
+filter_transitions_not_present_in_ref_pop.sh <t1_vcf> <t2_vcf> <popname> <outfile>
 ```
 
 8c. Zip, index, and merge filtered vcfs

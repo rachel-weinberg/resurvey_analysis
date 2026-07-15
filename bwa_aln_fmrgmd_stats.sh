@@ -7,15 +7,15 @@ module load bio/bwa
 
 
 # Input validation
-if [ $# -eq 0 ]; then
-    echo "Error: No sample ID provided"
-    echo "Usage: $0 <sample_id>"
+if [ $# -lt 2 ]; then
+    echo "Error: sample ID and/or reference fasta not provided"
+    echo "Usage: $0 <sample_id> <reference_fasta>"
     exit 1
 fi
 
 line=$1
 id=$line
-ref=/global/scratch/users/rachelweinberg/UCE_Data/alignment/cds_alignments/cds_matching_uces.fasta
+ref=$2
 r1=../../resurvey_clean/${id}/split-adapter-quality-trimmed/${id}-_READ1.fastp2.fastq.gz
 r2=${r1/READ1/READ2}
 outdir=.

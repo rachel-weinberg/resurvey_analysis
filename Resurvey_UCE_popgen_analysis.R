@@ -34,15 +34,20 @@ pacman::p_load(
   admixtools
 )
 
-setwd("~/Documents/UCB/lab_stuff/LhumGenomic/UCEanalysis")
+#Assumes working directory is the UCE_analysis project root
+
+#set.seed ensures permutation/bootstrap results (mantel.test, test.within/test.between, boot.vc) are reproducible across runs
+set.seed(42)
 
 #Folder with popgen results
 vcftools_results_folder <- "vcftools_popgen_results_resurvey_noEPOW_MP23ref"
+window_pi_file <- file.path(vcftools_results_folder, "win_pi_1kb_noEPOW_250717.tsv")
 
 # Import vcf and behavior/location metadata
 
+behavior_data_path <- "../Lhum_aggression/CA_Lhum_graphable.csv" #Replace with filepath for behavior/location metadata csv
 Lhum_behavior <- read_csv(
-  "~/Documents/UCB/lab_stuff/Lhum_aggression/CA_Lhum_graphable.csv"
+  behavior_data_path
 )
 colnames(Lhum_behavior) <- c(
   "location",
@@ -419,7 +424,7 @@ LS_loci <- gen_loci %>% filter(grepl("LS", population))
 pi_path <- paste0(vcftools_results_folder, "/pi_dat")
 site_pi <- read_pi_data(pi_path)
 site_pi_all <- read_table(
-  "/Users/rachelweinberg/Documents/UCB/lab_stuff/LhumGenomic/UCEanalysis/vcftools_popgen_results_resurvey_noEPOW_MP23ref/win_pi_1kb_noEPOW_250714.tsv"
+  window_pi_file
 ) |>
   mutate(
     Timepoint = ifelse(KC23 %in% s1_pops, "S1", "S2"),
@@ -444,7 +449,7 @@ site_pi_s1 <- site_pi_all |> filter(pop %in% s1_pops)
 ggplot(site_pi_s1, aes(x = group, y = PI)) + geom_boxplot()
 
 pistats_window <- read_delim(
-  "/Users/rachelweinberg/Documents/UCB/lab_stuff/LhumGenomic/UCEanalysis/vcftools_popgen_results_resurvey_noEPOW_MP23ref/win_pi_1kb_noEPOW_250717.tsv",
+  window_pi_file,
   delim = "\t",
   escape_double = FALSE,
   col_types = cols(
@@ -672,7 +677,7 @@ ggplot(Fstats_long, aes(x = stat_time, y = value)) +
   labs(title = "F-statistics (pegas) S1 vs S2")
 
 # ---- Heterozygosity (vcftools output and adegenet/pegas) ----
-het_path <- "vcftools_popgen_results_resurvey_noEPOW_MP23ref/het"
+het_path <- file.path(vcftools_results_folder, "het")
 het_df <- read_het_data(het_path) %>%
   mutate(
     Timepoint = case_when(pop %in% s1_pops ~ "S1", pop %in% s2_pops ~ "S2"),
@@ -825,7 +830,7 @@ ggplot(
   scale_color_manual(values = col_s1_v_s2)
 
 # ---- Tajima's D ----
-Tajima_path <- "/Users/rachelweinberg/Documents/UCB/lab_stuff/LhumGenomic/UCEanalysis/vcftools_popgen_results_resurvey_noEPOW_MP23ref/TajimaD_by_UCE"
+Tajima_path <- file.path(vcftools_results_folder, "TajimaD_by_UCE")
 
 Tajima_df <- read_tajima_data(Tajima_path) |>
   mutate(
