@@ -43,7 +43,7 @@ sample_name=${line}
 awk -v sample_name="$sample_name" '{print sample_name "\t" $0}' ${pi_dir}/${line}.windowed.pi >> win_pi_1kb_noEPOW_250717.tsv
 done < $poplist
 
-
+#Concatenate site pi
 while read -r line;
 do
 sample_name=${line}
@@ -84,5 +84,4 @@ do
     done
 done
 
-#One-off: combined heterozygosity for pooled WL2201 + WL2202 samples (WL22)
-vcftools --vcf $vcf --indv WL2201 --indv WL2202 --het --out ${het_dir}/WL22
+

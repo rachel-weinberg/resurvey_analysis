@@ -41,7 +41,10 @@ set.seed(42)
 
 #Folder with popgen results
 vcftools_results_folder <- "vcftools_popgen_results_resurvey_noEPOW_MP23ref"
-window_pi_file <- file.path(vcftools_results_folder, "win_pi_1kb_noEPOW_250717.tsv")
+window_pi_file <- file.path(
+  vcftools_results_folder,
+  "win_pi_1kb_noEPOW_250717.tsv"
+)
 
 # Import vcf and behavior/location metadata
 
@@ -79,14 +82,14 @@ popmap <- data.frame(
   pop = ""
 )
 
-years = c("s1", "s2")
+years <- c("s1", "s2")
 years_survey1 <- c(97, 98, 99, 00, 03, 04, 07)
 for (i in years_survey1) {
-  popmap$pop[grep(i, popmap$id)] = "s1"
+  popmap$pop[grep(i, popmap$id)] <- "s1"
 }
 years_survey2 <- c(22, 23, 24)
 for (i in years_survey2) {
-  popmap$pop[grep(i, popmap$id)] = "s2"
+  popmap$pop[grep(i, popmap$id)] <- "s2"
 }
 popmap_yr <- popmap
 
@@ -113,14 +116,14 @@ pops <- c(
   "TWC"
 )
 for (i in pops) {
-  popmap$pop[grep(i, popmap$id)] = i
+  popmap$pop[grep(i, popmap$id)] <- i
 }
 popmap_loc <- popmap
 
 for (i in pops) {
   for (j in c(years_survey1, years_survey2)) {
-    popyr = paste(i, j, sep = "")
-    popmap$pop[grep(popyr, popmap$id)] = popyr
+    popyr <- paste(i, j, sep = "")
+    popmap$pop[grep(popyr, popmap$id)] <- popyr
   }
 }
 popmap$pop[popmap$id %in% c("LH0001", "LH0003")] <- "LH00"
@@ -504,19 +507,19 @@ PCA_scores$pop <- 0
 PCA_scores$year <- 0
 PCA_scores$supercolony <- ""
 for (i in pops) {
-  PCA_scores$pop[grep(i, rownames(PCA_scores))] = i
+  PCA_scores$pop[grep(i, rownames(PCA_scores))] <- i
 }
 for (i in years_survey1) {
-  PCA_scores$year[grep(i, rownames(PCA_scores))] = "s1"
+  PCA_scores$year[grep(i, rownames(PCA_scores))] <- "s1"
 }
 for (i in years_survey2) {
-  PCA_scores$year[grep(i, rownames(PCA_scores))] = "s2"
+  PCA_scores$year[grep(i, rownames(PCA_scores))] <- "s2"
 }
 for (i in 1:nrow(beh_df)) {
   PCA_scores$supercolony[grep(
     beh_df$pop[i],
     rownames(PCA_scores)
-  )] = beh_df$beh[i]
+  )] <- beh_df$beh[i]
 }
 
 variance_explained <- (genlight_PCA$eig / length(genlight_PCA$eig)) * 100
