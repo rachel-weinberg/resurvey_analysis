@@ -19,7 +19,6 @@ pacman::p_load(
   poppr,
   pegas,
   GenoPop,
-  ggtree,
   paletteer,
   hierfstat,
   geosphere,
@@ -33,10 +32,9 @@ pacman::p_load(
 
 #Assumes working directory is the UCE_analysis project root
 
-#set.seed ensures permutation/bootstrap results (mantel.test, test.within/test.between, boot.vc) are reproducible across runs
-set.seed(42)
+set.seed(123)
 
-#Folder with popgen results
+#Folder with vcftools popgen results
 vcftools_results_folder <- "vcftools_popgen_results_resurvey_noEPOW_MP23ref"
 window_pi_file <- file.path(
   vcftools_results_folder,
@@ -69,6 +67,7 @@ rownames(geo_dist) <- Lhum_behavior$ID
 colnames(geo_dist) <- Lhum_behavior$ID
 
 vcf1 <- read.vcfR("resurvey_MP23_allfilters_no_EPOW_250714.recode.vcf")
+
 vcf_hist <- read.vcfR("vcf_all_samples_ab_filtered_100_0.3_noEPOW.vcf")
 
 vcf <- vcf1 #Change vcf depending on whether analyzing resurvey or resurvey + historical samples
@@ -304,7 +303,7 @@ read_tajima_data <- function(tajima_path) {
     tajima_data$pop <- pop
     all_tajima_df <- rbind(all_tajima_df, tajima_data)
   }
-  all_tajima_df <- all_tajima_df %>% filter(!is.na(TajimaD))
+  all_tajima_df <- all_tajima_df |> filter(!is.na(TajimaD))
   return(all_tajima_df)
 }
 
@@ -341,18 +340,18 @@ read_pi_data <- function(pi_path) {
 }
 #Subsample PCA plots to one sample/pop
 subsample_PCA <- function(PCA) {
-  PCA <- PCA %>% group_by(pop, year) %>% filter(row_number() == 2)
+  PCA <- PCA |> group_by(pop, year) |> filter(row_number() == 2)
 }
 
 #Calculate mean pairwise difference by UCE locus
 mean_pw_diff_per_locus <- function(distmat) {
-  Gst_mean <- distmat %>%
-    group_by(CHROM) %>%
+  Gst_mean <- distmat |>
+    group_by(CHROM) |>
     summarise(across(starts_with("Gst"), ~ mean(.x, na.rm = TRUE)))
-  Gst_se <- distmat %>%
-    group_by(CHROM) %>%
+  Gst_se <- distmat |>
+    group_by(CHROM) |>
     summarise(across(starts_with("Gst"), ~ sd(.x, na.rm = TRUE)))
-  n_variants <- distmat %>% group_by(CHROM) %>% summarise(n_variants = n())
+  n_variants <- distmat |> group_by(CHROM) |> summarise(n_variants = n())
 
   result1 <- merge(Gst_mean, Gst_se, by = "CHROM", suffixes = c(".mean", ".se"))
   result2 <- merge(result1, n_variants, by = "CHROM")
@@ -374,7 +373,7 @@ read_het_data <- function(het_path) {
     het_data$pop <- pop
     all_het_df <- rbind(all_het_df, het_data)
   }
-  all_het_df <- all_het_df %>% mutate(heterozygosity = 1 - (O_HOM / N_SITES))
+  all_het_df <- all_het_df |> mutate(heterozygosity = 1 - (O_HOM / N_SITES))
   return(all_het_df)
 }
 
@@ -411,13 +410,13 @@ gp <- genind2genpop(gen)
 gen_loci <- as.loci(gen, ploidy = 2)
 HS_loci <- genind2hierfstat(gen)
 
-gens1_loci <- gen_loci %>% filter(grepl("s1", population))
-gens2_loci <- gen_loci %>% filter(grepl("s2", population))
-LSC_loci <- gen_loci %>% filter(grepl("LSC", population))
-LSC_s1_loci <- LSC_loci %>% filter(grepl("s1", population))
-LSC_s2_loci <- LSC_loci %>% filter(grepl("s2", population))
-LH_loci <- gen_loci %>% filter(grepl("LH", population))
-LS_loci <- gen_loci %>% filter(grepl("LS", population))
+gens1_loci <- gen_loci |> filter(grepl("s1", population))
+gens2_loci <- gen_loci |> filter(grepl("s2", population))
+LSC_loci <- gen_loci |> filter(grepl("LSC", population))
+LSC_s1_loci <- LSC_loci |> filter(grepl("s1", population))
+LSC_s2_loci <- LSC_loci |> filter(grepl("s2", population))
+LH_loci <- gen_loci |> filter(grepl("LH", population))
+LS_loci <- gen_loci |> filter(grepl("LS", population))
 
 
 # Read site and window pi outputs from vcftools
@@ -480,11 +479,11 @@ pistats_window <- pistats_window[is.na(pistats_window$N_VARIANTS) == FALSE, ] |>
   )
 
 # Summary and plot
-pistats_win_summary <- pistats_window %>%
-  group_by(pop, Timepoint) %>%
+pistats_win_summary <- pistats_window |>
+  group_by(pop, Timepoint) |>
   summarise(mean_pi = mean(PI), sd_pi = sd(PI), n_windows = n())
 ggboxplot(
-  data = pistats_window %>% group_by(pop, Timepoint),
+  data = pistats_window |> group_by(pop, Timepoint),
   x = "pop",
   y = "PI",
   fill = "pop",
@@ -522,8 +521,9 @@ for (i in 1:nrow(beh_df)) {
 variance_explained <- (genlight_PCA$eig / length(genlight_PCA$eig)) * 100
 colnames(PCA_scores)[1:4] <- c("PC1", "PC2", "PC3", "PC4")
 
-PCA_subsampled <- PCA_scores %>%
-  group_by(pop, year) %>%
+#Subsample one individual per site for PCA visualization
+PCA_subsampled <- PCA_scores |>
+  group_by(pop, year) |>
   filter(row_number() == 1)
 ggplot(
   PCA_subsampled,
@@ -585,26 +585,26 @@ for (i in LSC_stable_sites) {
   }
 }
 
-Dch_df_s1 <- melt(Dch_s1_matrix) %>% mutate(timepoint = "S1")
-Dch_df_s2 <- melt(Dch_s2_matrix) %>% mutate(timepoint = "S2")
+Dch_df_s1 <- melt(Dch_s1_matrix) |> mutate(timepoint = "S1")
+Dch_df_s2 <- melt(Dch_s2_matrix) |> mutate(timepoint = "S2")
 Dch_df_all <- rbind(Dch_df_s1, Dch_df_s2)
 
-Dch_1_df_allcols <- melt(Dch_s1_matrix, varnames = c("pop1", "pop2")) %>%
-  mutate(pair = paste0(pop1, "_", pop2), timepoint = "s1") %>%
-  inner_join(pw_geo_df_LSC_stable) %>%
+Dch_1_df_allcols <- melt(Dch_s1_matrix, varnames = c("pop1", "pop2")) |>
+  mutate(pair = paste0(pop1, "_", pop2), timepoint = "s1") |>
+  inner_join(pw_geo_df_LSC_stable) |>
   select(pair, timepoint, value, geo_diff)
-Dch_2_df_allcols <- melt(Dch_s2_matrix, varnames = c("pop1", "pop2")) %>%
-  mutate(pair = paste0(pop1, "_", pop2), timepoint = "s2") %>%
-  inner_join(pw_geo_df_LSC_stable) %>%
+Dch_2_df_allcols <- melt(Dch_s2_matrix, varnames = c("pop1", "pop2")) |>
+  mutate(pair = paste0(pop1, "_", pop2), timepoint = "s2") |>
+  inner_join(pw_geo_df_LSC_stable) |>
   select(pair, timepoint, value, geo_diff)
-Dch_gen_geo_dists_all <- rbind(Dch_1_df_allcols, Dch_2_df_allcols) %>%
-  mutate(geo_diff_km = as.numeric(geo_diff) / 1000) %>%
+Dch_gen_geo_dists_all <- rbind(Dch_1_df_allcols, Dch_2_df_allcols) |>
+  mutate(geo_diff_km = as.numeric(geo_diff) / 1000) |>
   filter(geo_diff_km > 0)
 
 
 #Plot genetic vs geographic distance for S1
 ggplot(
-  Dch_gen_geo_dists_all %>% filter(timepoint == "s1"),
+  Dch_gen_geo_dists_all |> filter(timepoint == "s1"),
   aes(x = geo_diff_km, y = value)
 ) +
   geom_point() +
@@ -618,7 +618,7 @@ ggplot(
 
 #Plot genetic vs geographic distance for S2
 ggplot(
-  Dch_gen_geo_dists_all %>% filter(timepoint == "s2"),
+  Dch_gen_geo_dists_all |> filter(timepoint == "s2"),
   aes(x = geo_diff_km, y = value)
 ) +
   geom_point() +
@@ -642,70 +642,14 @@ mantel_s1 <- mantel.test(
 )
 mantel_s1
 
-# ---- Fst (WC84 and pegas Fst) ----
-# Weir & Cockerham (WC84) pairwise via genet.dist
-Hs_loci <- HS_loci # already created above as hierfstat object
-WC84_Fst_all <- genet.dist(HS_loci, diploid = T, method = "WC84")
-WC84_Fst_df <- melt(as.matrix(WC84_Fst_all), varnames = c("pop1", "pop2")) %>%
-  mutate(
-    pop1 = str_extract(pop1, "(?<=_).+"),
-    pop2 = str_extract(pop2, "(?<=_).+"),
-    pair = paste0(pop1, "_", pop2)
-  )
 
-# pegas Fst by group
-gens1_loci <- gen_loci %>% filter(grepl("s1", population))
-gens2_loci <- gen_loci %>% filter(grepl("s2", population))
-Fstats_s1 <- pegas::Fst(gens1_loci)
-Fstats_s2 <- pegas::Fst(gens2_loci)
-
-# Boxplots of Fst distributions
-Fst_LSC_s1 <- data.frame(Fstats_s1) %>% filter(!is.na(Fst))
-Fst_LSC_s2 <- data.frame(Fstats_s2) %>% filter(!is.na(Fst))
-
-# combine & plot
-Fstats_all <- merge(
-  Fst_LSC_s1,
-  Fst_LSC_s2,
-  by = "row.names",
-  suffixes = c(".s1", ".s2")
-)
-Fstats_long <- Fstats_all %>%
-  pivot_longer(cols = -Row.names, names_to = "stat_time", values_to = "value")
-ggplot(Fstats_long, aes(x = stat_time, y = value)) +
-  geom_boxplot() +
-  labs(title = "F-statistics (pegas) S1 vs S2")
-
-# ---- Heterozygosity (vcftools output and adegenet/pegas) ----
-het_path <- file.path(vcftools_results_folder, "het")
-het_df <- read_het_data(het_path) %>%
-  mutate(
-    Timepoint = case_when(pop %in% s1_pops ~ "S1", pop %in% s2_pops ~ "S2"),
-    POP = case_when(
-      pop %in% LH ~ "LH",
-      pop %in% LSC ~ "LSC",
-      pop %in% LS ~ "LS"
-    )
-  )
-
-het_known <- het_df %>% filter(POP %in% c("LH", "LSC", "LS"))
-ggboxplot(
-  data = het_known %>% group_by(POP, Timepoint),
-  x = "POP",
-  y = "heterozygosity",
-  fill = "POP",
-  palette = c("#56B4E9", "#E69F00", "#009E73"),
-  facet.by = "Timepoint"
-) +
-  labs(title = "Heterozygosity across supercolonies")
-
-# Hs (expected heterozygosity) from adegenet/pegas
+# ---- Heterozygosity (using Hierfstat) ----
 stats <- basic.stats(HS_loci)
-HS_all <- data.frame(stats$Hs) %>%
-  pivot_longer(everything(), names_to = "pop", values_to = "Hs") %>%
+HS_all <- data.frame(stats$Hs) |>
+  pivot_longer(everything(), names_to = "pop", values_to = "Hs") |>
   mutate(Timepoint = ifelse(str_detect(pop, "s1"), "S1", "S2"))
 ggboxplot(
-  HS_all %>% group_by(pop, Timepoint),
+  HS_all |> group_by(pop, Timepoint),
   x = "pop",
   y = "Hs",
   fill = "Timepoint"
@@ -719,8 +663,8 @@ pop_levels <- data.frame(
   loc = factor(popmap_all$loc)
 )
 HS_dat_levels <- data.frame(cbind(pop_levels), HS_loci)
-HS_dat_levels_s1 <- HS_dat_levels %>% filter(time == "s1")
-HS_dat_levels_s2 <- HS_dat_levels %>% filter(time == "s2")
+HS_dat_levels_s1 <- HS_dat_levels |> filter(time == "s1")
+HS_dat_levels_s2 <- HS_dat_levels |> filter(time == "s2")
 HS_dat_levels_only_s1 <- HS_dat_levels_s1[, 2:3]
 HS_dat_levels_only_s2 <- HS_dat_levels_s2[, 2:3]
 

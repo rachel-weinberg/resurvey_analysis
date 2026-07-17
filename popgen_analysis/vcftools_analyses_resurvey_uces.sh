@@ -58,30 +58,3 @@ while read -r line;
 do
 vcftools --vcf $vcf --keep ${samplelist_dir}/${line}_samples.txt --TajimaD 1000 --out ${tajima_dir}/${line}
 done < $poplist
-
-#Calculate heterozygosity by pop
-het_dir=het
-mkdir -p $het_dir
-while read -r line;
-do
-vcftools --vcf $vcf --keep ${samplelist_dir}/${line}_samples.txt --het --out ${het_dir}/${line}
-done < $poplist
-
-#Calculate pairwise Fst (Weir & Cockerham) between each pair of pops
-fst_dir=${outfolder}/fst
-mkdir -p $fst_dir
-mapfile -t pops < $poplist
-for ((i=0; i<${#pops[@]}; i++));
-do
-    for ((j=i+1; j<${#pops[@]}; j++));
-    do
-        pop1=${pops[i]}
-        pop2=${pops[j]}
-        vcftools --vcf $vcf \
-            --weir-fst-pop ${samplelist_dir}/${pop1}_samples.txt \
-            --weir-fst-pop ${samplelist_dir}/${pop2}_samples.txt \
-            --out ${fst_dir}/${pop1}_vs_${pop2}
-    done
-done
-
-
