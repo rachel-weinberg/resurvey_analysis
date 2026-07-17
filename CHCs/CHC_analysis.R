@@ -188,3 +188,43 @@ ggplot(pca_pts, aes(x = PC1, y = PC2, color = beh)) +
     label.size = 0.5,
     show.legend = FALSE
   )
+
+
+CHC_sim <- anosim(
+  normed_peaks_log,
+  grouping = factor(dist_pts$beh),
+  permutations = 999
+)
+
+CHC_kmeans <- kmeans(normed_peaks_log, 2)
+pca_kmeans <- kmeans(pca_pts[, 2:3], 2)
+MDS_kmeans <- kmeans(dist_pts[, 1:2], 2)
+
+fitted <- fitted(CHC_kmeans)
+
+dist_pts <- cbind(dist_pts, cluster = MDS_kmeans$cluster)
+
+ggplot(
+  data = pca_pts,
+  aes(x = PC1, y = PC2, color = as.factor(pca_kmeans$cluster))
+) +
+  geom_point()
+
+
+CHC_dist_plot <- ggplot(
+  dist_pts,
+  aes(x = MDS1, y = MDS2, color = beh, shape = role)
+) +
+  geom_point(size = 3) +
+  labs(
+    title = "Cuticular Hydrocarbon Bray-Curtis Distance, All Peaks 6-34 Minutes",
+    x = "MDS1",
+    y = "MDS2"
+  ) +
+  theme_linedraw() +
+  scale_color_manual(values = color_beh) +
+  scale_shape_manual(values = c("reference" = 4, "sample" = 16)) +
+  theme(panel.grid = element_blank()) +
+  stat_ellipse(aes(group = cluster), type = "t")
+
+CHC_dist_plot
