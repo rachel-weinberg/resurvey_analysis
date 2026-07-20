@@ -17,25 +17,17 @@ module load bio/bwa
 source activate seq_analysis
 
 
-ref=cds_matching_uces.fasta
+ref=MP2303_uces.fasta
 outdir=variants
 statdir=stats
 mkdir -p $outdir
 
 bam_list=$1
-#name=${bam_list#../sample_list_}
-#name=${name%.txt}
+
+
 name1=${bam_list#bamlist_}
 name=${name1%.txt}
-#command to output all variant sites (usually use this one)
-#bcftools mpileup -a FORMAT/AD,FORMAT/DP,FORMAT/SP,INFO/AD -I -f $ref -b dupmarked_bamlist_all.txt -Ou | bcftools call -m -Ov -o EPOW2202_uce_vars_all_250525.vcf
 
-#Command to output ALL sites
-#bcftools mpileup -a FORMAT/AD,FORMAT/DP,FORMAT/SP -f $ref -b $bam_list -Ou | bcftools call -m -Ov -o ${outdir}/${name}_all_sites.vcf
-
-#Command for specific regions only
-bcftools mpileup -a FORMAT/AD,FORMAT/DP,FORMAT/SP -f $ref -b $bam_list -T contigs_with_three_changed_sites.txt -Ou | bcftools call -m -Ov -o ${outdir}/${name}_cds.vcf
-
-#For single sample specific regions
-#bcftools mpileup -a FORMAT/AD,FORMAT/DP,FORMAT/SP -f $ref NTKG002_AIW_3477_fmrgmd_uces.sorted.bam -T contigs_with_three_changed_sites.txt -Ou | bcftools call -m -Ov -o ${outdir}/${name}_cds.vcf
+#Output all variant sites 
+bcftools mpileup -a FORMAT/AD,FORMAT/DP,FORMAT/SP,INFO/AD -I -f $ref -b dupmarked_bamlist_all.txt -Ou | bcftools call -m -Ov -o EPOW2202_uce_vars_all_250525.vcf
 

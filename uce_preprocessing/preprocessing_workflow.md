@@ -102,6 +102,7 @@ filter_transitions_not_present_in_ref_pop.sh <t1_vcf> <t2_vcf> <popname> <outfil
 ```
 bcftools_zip_index_merge.sh <list_of_vcfs_to_merge.txt> <output.vcf>
 ```
+The result is a vcf with variant calls for all populations. The folllowing steps are applied to the merged vcf.
 
 9. Filter for allele balance then remove sites with missing data using vcfR
 

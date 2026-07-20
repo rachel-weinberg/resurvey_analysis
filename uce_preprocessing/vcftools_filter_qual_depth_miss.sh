@@ -15,7 +15,10 @@ vcftools --vcf $vcf --missing-indv
 #Get list of individuals with >10% missing data
 awk '$5 > 0.1' out.imiss | cut -f1 > lowDP.indv
 
-vcftools --vcf $vcf --remove lowDP.indv --out ${pop}_90p --recode --recode-INFO-all 
+vcftools --vcf $vcf \
+--remove lowDP.indv \
+--out ${pop}_90p \
+--recode --recode-INFO-all 
 
 
 

@@ -16,6 +16,7 @@ out=$4
 
 
 #Get list of transitions from contemporary file
+#For MC/SC historical samples, this should come from a merged vcf of all transitions in contemporary LSC, LH, and SK pops
 bcftools query -f '%CHROM\t%POS\t%REF\t%ALT\n' -i 'TYPE="snp" && QUAL>=30 && INFO/DP>=5 && ((REF="A" && ALT="G") || (REF="G" && ALT="A") || (REF="C" && ALT="T") || (REF="T" && ALT="C"))' $vcf2 > ref_transitions_${pop}.txt
 
 #Get list of transitions in historical file and compare to contemporary list w grep
@@ -23,13 +24,5 @@ bcftools query -f '%CHROM\t%POS\t%REF\t%ALT\n' -i 'TYPE="snp" && ((REF="A" && AL
 grep -v -F -f ref_transitions_${pop}.txt | \
 cut -f1,2 > mask_positions_${pop}.txt
 
-bcftools view --targets-file ^mask_positions_${pop}.txt $vcf1 -o $out
-
-
-#all sites
-
-bcftools query -f '%CHROM\t%POS\t%REF\t%ALT\n' -i 'TYPE="snp" && ((REF="A" && ALT="G") || (REF="G" && ALT="A") || (REF="C" && ALT="T") || (REF="T" && ALT="C"))' $vcf1 | \
-grep -v -F -f ref_transitions_${pop}.txt | \
-cut -f1,2 > mask_positions_${pop}.txt
-
+#Remove transitions missing from contemporary file
 bcftools view --targets-file ^mask_positions_${pop}.txt $vcf1 -o $out
