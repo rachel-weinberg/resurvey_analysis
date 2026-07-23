@@ -72,7 +72,7 @@ vcf_hist <- read.vcfR("vcf_all_samples_ab_filtered_100_0.3_noEPOW.vcf")
 
 vcf <- vcf1 #Change vcf depending on whether analyzing resurvey or resurvey + historical samples
 
-# ---- Population map and behavior assignments (popmap) ----
+# Set population map and behavior assignments (popmap)
 popmap <- data.frame(
   id = colnames(vcf@gt)[2:length(colnames(vcf@gt))],
   pop = ""
@@ -162,7 +162,9 @@ LSC <- c(
   "WL03",
   "WL22"
 )
+
 LS <- c("LS97", "LS23")
+
 LH <- c(
   "LH00",
   "LH23",
@@ -289,6 +291,8 @@ popmap_all <- left_join(popmap_beh_yr, popmap_loc, by = "id")
 colnames(popmap_all) <- c("id", "beh", "yr", "loc")
 
 
+### FUNCTIONS ###
+
 #Helper functions to import data
 read_tajima_data <- function(tajima_path) {
   tajima_files <- list.files(
@@ -359,25 +363,7 @@ mean_pw_diff_per_locus <- function(distmat) {
 }
 
 
-read_het_data <- function(het_path) {
-  het_files <- list.files(
-    path = het_path,
-    pattern = "\\.het$",
-    full.names = TRUE
-  )
-  all_het_df <- data.frame()
-  for (file in het_files) {
-    pop <- str_extract(basename(file), "[A-Z]{2,3}[0-9]{2}")
-    het_data <- read.delim(file, sep = "\t")
-    colnames(het_data) <- c("INDV", "O_HOM", "E_HOM", "N_SITES", "F")
-    het_data$pop <- pop
-    all_het_df <- rbind(all_het_df, het_data)
-  }
-  all_het_df <- all_het_df |> mutate(heterozygosity = 1 - (O_HOM / N_SITES))
-  return(all_het_df)
-}
-
-#standard error
+#standard error function
 se <- function(x, na.rm = FALSE) {
   if (na.rm == TRUE) {
     x <- x[is.na(x) == FALSE]
@@ -392,7 +378,10 @@ get_pw_geodist <- function(distmat, pop1, pop2) {
   return(c(name, dist))
 }
 
-# ---- Convert to genlight / genind and create HS / loci objects ----
+
+### Convert data formats
+
+#Convert to genlight / genind and create HS / loci objects
 genl <- vcfR2genlight(vcf)
 ploidy(genl) <- 2
 gen <- vcfR2genind(vcf, sep = "[/]", return.alleles = TRUE)
@@ -418,6 +407,8 @@ LSC_s2_loci <- LSC_loci |> filter(grepl("s2", population))
 LH_loci <- gen_loci |> filter(grepl("LH", population))
 LS_loci <- gen_loci |> filter(grepl("LS", population))
 
+
+### Nucleotide diversity analysis
 
 # Read site and window pi outputs from vcftools
 pi_path <- paste0(vcftools_results_folder, "/pi_dat")
@@ -496,7 +487,8 @@ ggboxplot(
     subtitle = "vcftools window pi"
   )
 
-# ---- PCA ----
+## PCA
+# Calculate PCA
 genlight_PCA <- glPca(genl)
 PCA_scores <- data.frame(genlight_PCA$scores[, 1:4])
 PCA_scores$pop <- 0
@@ -538,7 +530,9 @@ ggplot(
   theme_linedraw()
 
 
-# ---- Isolation by distance analyses ----
+## Isolation by distance analyses
+
+#Calculate distances (Dch = CSE chord distance)
 Dch <- genet.dist(HS_loci, diploid = T, method = "Dch")
 Dch_mat <- as.matrix(Dch)
 rownames(Dch_mat) <- gsub("^[^_]*_", "", rownames(Dch_mat))
@@ -558,11 +552,11 @@ colnames(Dch_s1_matrix) <- str_remove(colnames(Dch_s1_matrix), "_s1")
 rownames(Dch_s2_matrix) <- str_remove(rownames(Dch_s2_matrix), "_s2")
 colnames(Dch_s2_matrix) <- str_remove(colnames(Dch_s2_matrix), "_s2")
 
-# Convert geo_dist to pop-level names (strip numbers)
+# Convert geo_dist to pop-level names
 rownames(geo_dist) <- str_extract(rownames(geo_dist), "[A-Z]+")
 colnames(geo_dist) <- str_extract(colnames(geo_dist), "[A-Z]+")
 
-# Prepare dataframes for plotting / mantel
+# Prepare dataframes
 # pairwise geodist LSC stable sites
 LSC_stable_sites <- sort(c(
   "KC",
@@ -577,6 +571,7 @@ LSC_stable_sites <- sort(c(
   "UK",
   "WL"
 ))
+
 pw_geo_df_LSC_stable <- data.frame(pair = "", geo_diff = "")
 for (i in LSC_stable_sites) {
   for (j in LSC_stable_sites) {
@@ -601,6 +596,94 @@ Dch_gen_geo_dists_all <- rbind(Dch_1_df_allcols, Dch_2_df_allcols) |>
   mutate(geo_diff_km = as.numeric(geo_diff) / 1000) |>
   filter(geo_diff_km > 0)
 
+Convert
+chord
+distances
+to
+df
+Dch_1_df <- melt(Dch_s1_matrix, varnames = c("pop1", "pop2")) |>
+  mutate(pair = paste0(pop1, "_", pop2), timepoint = "s1") |>
+  inner_join(pw_geo_df_LSC_stable) |>
+  select(pair, timepoint, value, geo_diff)
+Dch_2_df <- melt(Dch_s2_matrix, varnames = c("pop1", "pop2")) |>
+  mutate(pair = paste0(pop1, "_", pop2), timepoint = "s2") |>
+  inner_join(pw_geo_df_LSC_stable) |>
+  select(pair, timepoint, value, geo_diff)
+
+#All colony matrix 1
+Dch_1_df_allcols <- melt(Dch_s1_matrix, varnames = c("pop1", "pop2")) |>
+  mutate(pair = paste0(pop1, "_", pop2), timepoint = "s1") |>
+  inner_join(pw_geo_df_all) |>
+  mutate(
+    relationship = case_when(
+      (pop1 %in%
+        c(str_extract(LH_s1, "[A-Z]+"), "LS") |
+        pop2 %in% c(str_extract(LH_s1, "[A-Z]+"), "LS")) &
+        (pop1 %in%
+          str_extract(LSC_s1, "[A-Z]+") |
+          pop2 %in% str_extract(LSC_s1, "[A-Z]+")) ~ "Between_supercolonies",
+      (pop1 %in%
+        str_extract(LH_s1, "[A-Z]+") &
+        pop2 %in% str_extract(LH_s1, "[A-Z]+")) ~ "Within_supercolonies_LH",
+      .default = "Within_supercolonies_LSC"
+    )
+  ) |>
+  select(pair, timepoint, relationship, value, geo_diff)
+#All colony matrix 2
+Dch_2_df_allcols <- melt(Dch_s2_matrix, varnames = c("pop1", "pop2")) |>
+  mutate(pair = paste0(pop1, "_", pop2), timepoint = "s2") |>
+  inner_join(pw_geo_df_all) |>
+  mutate(
+    relationship = case_when(
+      ((pop1 %in%
+        c(str_extract(LH_s2, "[A-Z]+"), "LS") &
+        pop2 %in% str_extract(LSC_s2, "[A-Z]+")) |
+        (pop2 %in% c(str_extract(LH_s2, "[A-Z]+"), "LS")) &
+          (pop1 %in% str_extract(LSC_s2, "[A-Z]+")) |
+        pop1 %in% c("LS") |
+        pop2 %in% c("LS")) ~ "Between_supercolonies",
+      (pop1 %in%
+        str_extract(LH_s2, "[A-Z]+") &
+        pop2 %in% str_extract(LH_s2, "[A-Z]+")) ~ "Within_supercolonies_LH",
+      .default = "Within_supercolonies_LSC"
+    )
+  ) |>
+  select(pair, timepoint, relationship, value, geo_diff)
+#Join both chord distnace timepoints to get df for plotting
+
+Dch_gen_geo_dists_all <- rbind(Dch_1_df_allcols, Dch_2_df_allcols) |>
+  mutate(geo_diff_km = as.numeric(geo_diff) / 1000) |>
+  filter(geo_diff_km > 0)
+
+#Join together, convert m to km, and remove identical pairs and samples that changed colony identity from S1 to S2
+changed_pops <- c(
+  "LA_s1",
+  "EPOW_s2",
+  "SB_s1",
+  "SJ_s1",
+  "LJC_s1",
+  "LJM_s1",
+  "PA_s1"
+)
+
+
+# Mantel test for LSC samples with 9999 permutations
+mantel_s1 <- mantel.test(Dch_s1_LSC, geo_dist_LSC, nperm = 9999, graph = T)
+
+mantel_s2 <- mantel.test(Dch_s2_LSC, geo_dist_LSC, nperm = 9999, graph = T)
+
+#Mantel tests for LH samples
+LH_s2_pops <- str_extract(LH_s2, "[A-Z]+")
+Dch_s2_matrix_LH <- Dch_s2_matrix[LH_s2_pops, LH_s2_pops]
+geo_matrix_LH_s2 <- geo_dist[LH_s2_pops, LH_s2_pops]
+
+
+mantel_LH_s2 <- mantel.test(
+  Dch_s2_matrix_LH,
+  geo_matrix_LH_s2,
+  nperm = 9999,
+  graph = T
+)
 
 #Plot genetic vs geographic distance for S1
 ggplot(
@@ -630,20 +713,8 @@ ggplot(
   ) +
   theme_linedraw()
 
-# Mantel test (LSC subset) - uses mantel.test from pegas
-# subset Dch matrices to LSC sites
-Dch_s1_LSC <- Dch_s1_matrix[LSC_stable_sites, LSC_stable_sites]
-geo_dist_LSC <- geo_dist[LSC_stable_sites, LSC_stable_sites]
-mantel_s1 <- mantel.test(
-  as.dist(Dch_s1_LSC),
-  as.dist(geo_dist_LSC),
-  nperm = 9999,
-  graph = FALSE
-)
-mantel_s1
 
-
-# ---- Heterozygosity (using Hierfstat) ----
+# Heterozygosity (using Hierfstat)
 stats <- basic.stats(HS_loci)
 HS_all <- data.frame(stats$Hs) |>
   pivot_longer(everything(), names_to = "pop", values_to = "Hs") |>
@@ -656,7 +727,45 @@ ggboxplot(
 ) +
   labs(title = "Expected heterozygosity (Hs)")
 
-# ---- Hierarchical variance components and F-statistics (hierfstat) ----
+#Calculate Weir and Cockerham's (1984) Fst
+#Calculate pairwise Fst for all populations
+WC84_Fst_all <- genet.dist(HS_loci, diploid = T, method = "WC84")
+
+#Calculate pairwise Fst for LSC populations
+WC84_Fst_LSC_s1 <- genet.dist(
+  HS_loci_s1 |> filter(str_detect(pop, "LSC")),
+  diploid = T,
+  method = "WC84"
+)
+WC84_Fst_LSC_s2 <- genet.dist(
+  HS_loci_s2 |> filter(str_detect(pop, "LSC")),
+  diploid = T,
+  method = "WC84"
+)
+
+#Calculate pairwise Fst for LH populations
+WC84_Fst_LH_s1 <- genet.dist(
+  HS_loci_s1 |> filter(str_detect(pop, "LH")),
+  diploid = T,
+  method = "WC84"
+)
+WC84_Fst_LH_s2 <- genet.dist(
+  HS_loci_s2 |> filter(str_detect(pop, "LH")),
+  diploid = T,
+  method = "WC84"
+)
+
+WC84_Fst_all <- genet.dist(HS_loci, diploid = T, method = "WC84")
+
+WC84_Fst_df <- melt(as.matrix(WC84_Fst_all), varnames = c("pop1", "pop2")) |>
+  mutate(
+    pop1 = str_extract(pop1, pattern = pat1),
+    pop2 = str_extract(pop2, pattern = pat1),
+    pair = paste0(pop1, "_", pop2)
+  )
+
+
+# Hierarchical variance components and F-statistics (hierfstat)
 pop_levels <- data.frame(
   time = factor(popmap_all$yr),
   beh = factor(popmap_beh$pop),
@@ -898,7 +1007,7 @@ Tajima_Wilcox_time <- compare_means(
 )
 
 
-# ---- Allele sharing distance / genetic distance via pegas ----
+# Allele sharing distance / genetic distance via pegas
 gen_loci2 <- genind2loci(gen)
 gendist <- dist.gene(gen_loci2)
 #allele sharing distance
@@ -931,27 +1040,9 @@ heatmap.2(
   margins = c(5, 5)
 )
 
-##Need to troubleshoot all this to get the tree
-##Make gen_loci object with popmap_yrloc info
+#ASD tree
 
-# # Convert gen to population-level genind object
-# gp <- genind2genpop(gen)
-
-# # Convert to loci format at population level
-# gp_loci <- as.loci(gp, ploidy = 2)
-
-# # Calculate allele sharing distance at population level
-# asd_pop <- dist.asd(gp_loci)
-
-# # Build tree
-# asd_tree <- nj(asd_pop)
-
-# # Plot
-# plot(asd_tree, type = "unrooted", cex = 0.7)
-# title("Population phylogeny - Allele Sharing Distance")
-
-# Method 1: Calculate population-level ASD from individual distances
-# Get individual-level ASD (which you already have)
+# Get individual-level ASD
 asd <- dist.asd(gen_loci, pairwise.deletion = TRUE)
 
 # Convert to matrix
@@ -959,7 +1050,7 @@ asd_mat <- as.matrix(asd)
 
 # Aggregate by population/supercolony
 # Extract population from individual names
-ind_pops <- popmap_yrloc$pop # or use whatever grouping you want (loc, yr, beh, etc.)
+ind_pops <- popmap_yrloc$pop
 
 # Calculate mean ASD between populations
 pop_names <- unique(ind_pops)
