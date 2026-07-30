@@ -18,16 +18,29 @@ Some site abbreviations in the analysis code differ from those in the main text.
 
 
 S1 = Survey 1 (equivalent to t1 in main text)
+
 S2 = Survey 2 (equivalent to t2 in main text)
+
 LSC = Large Supercolony
+
 LH = Lake Hodges Supercolony
+
 LS = Lake Skinner, equivalent to SK in main text
 
 Site abbreviations that differ from main text
 
 SAL = Salinas, equivalent to SA in main text
+
 SAU = Sausalito, equivalent to SL in main text
+
 SLO98 = San Luis Obispo, equivalent to SO in main text
+
 LJM = La Jolla Mesa, equivalent to LM in main text
+
 LJC = La Jolla Coast, equivanet to LC in main text
-TWC = Temecula Water Culvert, equivalent to TE in main tex
+
+TWC = Temecula Water Culvert, equivalent to TE in main text
+
+SBCo = San Benito County, equivalent to SC in main text
+
+LS = Lake Skinner, equivalent to SK in main text

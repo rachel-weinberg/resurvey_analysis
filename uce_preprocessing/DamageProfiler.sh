@@ -1,15 +1,3 @@
-#!/bin/bash
-#Job name:mapdamage_all
-#SBATCH --job-name=dmg_profiler
-#Account:
-#SBATCH --account=fc_tsutsuifca
-#Partition
-#SBATCH --partition=savio2_htc
-#SBATCH --qos=savio_normal
-#SBATCH --mail-user=rachel.weinberg@berkeley.edu
-#SBATCH --time=6:00:00
-
-
 module load anaconda3/2024.02-1-11.4
 module load gcc/10.5.0 
 module load r/4.4.0

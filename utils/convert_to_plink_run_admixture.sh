@@ -25,9 +25,8 @@ mv temp.bim ${output_prefix}.bim
 
 
 #Cross-validation
-#--seed fixes ADMIXTURE's random EM initialization so CV error and Q-matrices are reproducible across runs
-for k in 1 2 3 4 5 10 20;
-do admixture --cv --seed=42 ${output_prefix}.bed $k | tee log${k}.out; done
+for k in 1 2 3 4 5;
+do admixture --cv --seed=123 ${output_prefix}.bed $k | tee log${k}.out; done
 
 for i in log*.out;
 do cat $i | grep 'CV error'; done
