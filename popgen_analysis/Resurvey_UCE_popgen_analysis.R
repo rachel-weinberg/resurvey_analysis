@@ -45,7 +45,8 @@ window_pi_file <- file.path(
 
 behavior_data_path <- "/Users/rachelweinberg/Documents/UCB/lab_stuff/Lhum_aggression/CA_Lhum_graphable2.csv" #Replace with filepath for behavior/location metadata csv
 Lhum_behavior <- read_csv(
-  behavior_data_path
+  behavior_data_path,
+  col_names = TRUE
 )
 colnames(Lhum_behavior) <- c(
   "location",
@@ -66,9 +67,13 @@ geo_dist <- geodist(Lhum_loc, measure = "geodesic")
 rownames(geo_dist) <- Lhum_behavior$ID
 colnames(geo_dist) <- Lhum_behavior$ID
 
-vcf1 <- read.vcfR("/Users/rachelweinberg/Documents/UCB/lab_stuff/LhumGenomic/UCEanalysis/resurvey_MP23_allfilters_no_EPOW_250714.recode.vcf")
+vcf1 <- read.vcfR(
+  "/Users/rachelweinberg/Documents/UCB/lab_stuff/LhumGenomic/UCEanalysis/resurvey_MP23_allfilters_no_EPOW_250714.recode.vcf"
+)
 
-vcf_hist <- read.vcfR("/Users/rachelweinberg/Documents/UCB/lab_stuff/LhumGenomic/UCEanalysis/vcf_all_samples_ab_filtered_100_0.3_noEPOW.vcf")
+vcf_hist <- read.vcfR(
+  "/Users/rachelweinberg/Documents/UCB/lab_stuff/LhumGenomic/UCEanalysis/vcf_all_samples_ab_filtered_100_0.3_noEPOW.vcf"
+)
 
 vcf <- vcf1 #Change vcf depending on whether analyzing resurvey or resurvey + historical samples
 
@@ -373,7 +378,28 @@ se <- function(x, na.rm = FALSE) {
 
 #pairwise geographic distance
 get_pw_geodist <- function(distmat, pop1, pop2) {
-  dist <- distmat[pop1, pop2]
+  pop1_key <- if (pop1 %in% rownames(distmat)) {
+    pop1
+  } else {
+    str_extract(pop1, "^[A-Z]+")
+  }
+  pop2_key <- if (pop2 %in% colnames(distmat)) {
+    pop2
+  } else {
+    str_extract(pop2, "^[A-Z]+")
+  }
+
+  if (
+    is.na(pop1_key) ||
+      !pop1_key %in% rownames(distmat) ||
+      is.na(pop2_key) ||
+      !pop2_key %in% colnames(distmat)
+  ) {
+    name <- paste(pop1, "_", pop2, sep = "")
+    return(c(name, NA_real_))
+  }
+
+  dist <- distmat[pop1_key, pop2_key]
   name <- paste(pop1, "_", pop2, sep = "")
   return(c(name, dist))
 }
@@ -489,7 +515,7 @@ ggboxplot(
 
 ## PCA
 # Calculate PCA
-genlight_PCA <- glPca(genl)
+genlight_PCA <- glPca(genl, nf = 4)
 PCA_scores <- data.frame(genlight_PCA$scores[, 1:4])
 PCA_scores$pop <- 0
 PCA_scores$year <- 0
@@ -580,40 +606,44 @@ for (i in LSC_stable_sites) {
   }
 }
 
+pw_geo_df_all <- data.frame(pair = "", geo_diff = "")
+for (i in pops) {
+  for (j in pops) {
+    gd_pair_all <- get_pw_geodist(geo_dist, i, j)
+    pw_geo_df_all <- rbind(pw_geo_df_all, gd_pair_all)
+  }
+}
+
 Dch_df_s1 <- melt(Dch_s1_matrix) |> mutate(timepoint = "S1")
 Dch_df_s2 <- melt(Dch_s2_matrix) |> mutate(timepoint = "S2")
 Dch_df_all <- rbind(Dch_df_s1, Dch_df_s2)
 
 Dch_1_df_allcols <- melt(Dch_s1_matrix, varnames = c("pop1", "pop2")) |>
   mutate(pair = paste0(pop1, "_", pop2), timepoint = "s1") |>
-  inner_join(pw_geo_df_LSC_stable) |>
+  inner_join(pw_geo_df_all) |>
   select(pair, timepoint, value, geo_diff)
 Dch_2_df_allcols <- melt(Dch_s2_matrix, varnames = c("pop1", "pop2")) |>
   mutate(pair = paste0(pop1, "_", pop2), timepoint = "s2") |>
-  inner_join(pw_geo_df_LSC_stable) |>
+  inner_join(pw_geo_df_all) |>
   select(pair, timepoint, value, geo_diff)
 Dch_gen_geo_dists_all <- rbind(Dch_1_df_allcols, Dch_2_df_allcols) |>
   mutate(geo_diff_km = as.numeric(geo_diff) / 1000) |>
   filter(geo_diff_km > 0)
 
-Convert
-chord
-distances
-to
-df
+# Convert chord distances to dataframe
 Dch_1_df <- melt(Dch_s1_matrix, varnames = c("pop1", "pop2")) |>
   mutate(pair = paste0(pop1, "_", pop2), timepoint = "s1") |>
-  inner_join(pw_geo_df_LSC_stable) |>
+  inner_join(pw_geo_df_all) |>
   select(pair, timepoint, value, geo_diff)
 Dch_2_df <- melt(Dch_s2_matrix, varnames = c("pop1", "pop2")) |>
   mutate(pair = paste0(pop1, "_", pop2), timepoint = "s2") |>
-  inner_join(pw_geo_df_LSC_stable) |>
+  inner_join(pw_geo_df_all) |>
   select(pair, timepoint, value, geo_diff)
+
 
 #All colony matrix 1
 Dch_1_df_allcols <- melt(Dch_s1_matrix, varnames = c("pop1", "pop2")) |>
   mutate(pair = paste0(pop1, "_", pop2), timepoint = "s1") |>
-  inner_join(pw_geo_df_all) |>
   mutate(
     relationship = case_when(
       (pop1 %in%
@@ -628,11 +658,12 @@ Dch_1_df_allcols <- melt(Dch_s1_matrix, varnames = c("pop1", "pop2")) |>
       .default = "Within_supercolonies_LSC"
     )
   ) |>
+  filter(pop1 != pop2) |>
+  inner_join(pw_geo_df_all) |>
   select(pair, timepoint, relationship, value, geo_diff)
 #All colony matrix 2
 Dch_2_df_allcols <- melt(Dch_s2_matrix, varnames = c("pop1", "pop2")) |>
   mutate(pair = paste0(pop1, "_", pop2), timepoint = "s2") |>
-  inner_join(pw_geo_df_all) |>
   mutate(
     relationship = case_when(
       ((pop1 %in%
@@ -648,6 +679,8 @@ Dch_2_df_allcols <- melt(Dch_s2_matrix, varnames = c("pop1", "pop2")) |>
       .default = "Within_supercolonies_LSC"
     )
   ) |>
+  filter(pop1 != pop2) |>
+  inner_join(pw_geo_df_all) |>
   select(pair, timepoint, relationship, value, geo_diff)
 #Join both chord distnace timepoints to get df for plotting
 
