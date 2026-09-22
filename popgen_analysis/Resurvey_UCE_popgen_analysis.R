@@ -35,7 +35,7 @@ pacman::p_load(
 set.seed(123)
 
 #Folder with vcftools popgen results
-vcftools_results_folder <- "vcftools_popgen_results_resurvey_noEPOW_MP23ref"
+vcftools_results_folder <- "/Users/rachelweinberg/Documents/UCB/lab_stuff/LhumGenomic/UCEanalysis/vcftools_popgen_results_resurvey_noEPOW_MP23ref"
 window_pi_file <- file.path(
   vcftools_results_folder,
   "win_pi_1kb_noEPOW_250717.tsv"
@@ -43,7 +43,7 @@ window_pi_file <- file.path(
 
 # Import vcf and behavior/location metadata
 
-behavior_data_path <- "../Lhum_aggression/CA_Lhum_graphable.csv" #Replace with filepath for behavior/location metadata csv
+behavior_data_path <- "/Users/rachelweinberg/Documents/UCB/lab_stuff/Lhum_aggression/CA_Lhum_graphable2.csv" #Replace with filepath for behavior/location metadata csv
 Lhum_behavior <- read_csv(
   behavior_data_path
 )
@@ -66,9 +66,9 @@ geo_dist <- geodist(Lhum_loc, measure = "geodesic")
 rownames(geo_dist) <- Lhum_behavior$ID
 colnames(geo_dist) <- Lhum_behavior$ID
 
-vcf1 <- read.vcfR("resurvey_MP23_allfilters_no_EPOW_250714.recode.vcf")
+vcf1 <- read.vcfR("/Users/rachelweinberg/Documents/UCB/lab_stuff/LhumGenomic/UCEanalysis/resurvey_MP23_allfilters_no_EPOW_250714.recode.vcf")
 
-vcf_hist <- read.vcfR("vcf_all_samples_ab_filtered_100_0.3_noEPOW.vcf")
+vcf_hist <- read.vcfR("/Users/rachelweinberg/Documents/UCB/lab_stuff/LhumGenomic/UCEanalysis/vcf_all_samples_ab_filtered_100_0.3_noEPOW.vcf")
 
 vcf <- vcf1 #Change vcf depending on whether analyzing resurvey or resurvey + historical samples
 

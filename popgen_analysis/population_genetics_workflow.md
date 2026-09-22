@@ -11,7 +11,7 @@ All R packages are loaded in the corresponding R scripts
 vcftools_analyses_resurvey_uces.sh <vcf_file> <pop_list.txt>
 ```
 
-2. The bulk of the anlaysis is performed in the following script, which contains code to import and analyze vcftools outputs, calculate PCA, isolation by distance, allele sharing distances, heterozygosity, and heirarchical variance components (hierfstat)
+2. The bulk of the anlaysis is performed in the following script, which contains code to import and analyze vcftools outputs, calculate PCA, allelc richness, isolation by distance, allele sharing distances, heterozygosity, and heirarchical variance components (hierfstat)
 
 ```
 Resurvey_UCE_popgen_analysis.R
