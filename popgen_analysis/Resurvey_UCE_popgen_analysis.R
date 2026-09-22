@@ -30,9 +30,12 @@ pacman::p_load(
   gplots
 )
 
-#Assumes working directory is the UCE_analysis project root
 
 set.seed(123)
+
+#plot colors
+color_beh <- c("#56B4E9", "#E69F00", "#8F7EE5", "#009E73", "lightgrey")
+
 
 #Folder with vcftools popgen results
 vcftools_results_folder <- "/Users/rachelweinberg/Documents/UCB/lab_stuff/LhumGenomic/UCEanalysis/vcftools_popgen_results_resurvey_noEPOW_MP23ref"
@@ -658,7 +661,7 @@ Dch_1_df_allcols <- melt(Dch_s1_matrix, varnames = c("pop1", "pop2")) |>
       .default = "Within_supercolonies_LSC"
     )
   ) |>
-  filter(pop1 != pop2) |>
+  #filter(pop1 != pop2) |>
   inner_join(pw_geo_df_all) |>
   select(pair, timepoint, relationship, value, geo_diff)
 #All colony matrix 2
@@ -679,7 +682,7 @@ Dch_2_df_allcols <- melt(Dch_s2_matrix, varnames = c("pop1", "pop2")) |>
       .default = "Within_supercolonies_LSC"
     )
   ) |>
-  filter(pop1 != pop2) |>
+  #filter(pop1 != pop2) |>
   inner_join(pw_geo_df_all) |>
   select(pair, timepoint, relationship, value, geo_diff)
 #Join both chord distnace timepoints to get df for plotting
@@ -701,9 +704,20 @@ changed_pops <- c(
 
 
 # Mantel test for LSC samples with 9999 permutations
-mantel_s1 <- mantel.test(Dch_s1_LSC, geo_dist_LSC, nperm = 9999, graph = T)
+Dch_s1_matrix_LSC <- Dch_s1_matrix[LSC_stable_sites, LSC_stable_sites]
+mantel_s1_LSC <- mantel.test(
+  Dch_s1_matrix_LSC,
+  geo_dist[LSC_stable_sites, LSC_stable_sites],
+  nperm = 9999,
+  graph = T
+)
 
-mantel_s2 <- mantel.test(Dch_s2_LSC, geo_dist_LSC, nperm = 9999, graph = T)
+mantel_s2_LSC <- mantel.test(
+  Dch_s2_matrix[LSC_stable_sites, LSC_stable_sites],
+  geo_dist[LSC_stable_sites, LSC_stable_sites],
+  nperm = 9999,
+  graph = T
+)
 
 #Mantel tests for LH samples
 LH_s2_pops <- str_extract(LH_s2, "[A-Z]+")
@@ -721,28 +735,44 @@ mantel_LH_s2 <- mantel.test(
 #Plot genetic vs geographic distance for S1
 ggplot(
   Dch_gen_geo_dists_all |> filter(timepoint == "s1"),
-  aes(x = geo_diff_km, y = value)
+  aes(x = geo_diff_km, y = value, color = relationship)
 ) +
   geom_point() +
-  stat_smooth(method = "lm", aes(fill = timepoint), alpha = 0.3) +
+  stat_smooth(method = "lm", aes(fill = relationship), alpha = 0.3) +
   labs(
     title = "Genetic (Dch) vs Geographic distance (S1)",
     x = "Distance (km)",
     y = "Cavalli-Sforza & Edwards chord distance"
+  ) +
+  scale_color_manual(values = c(color_beh[4], color_beh[2], color_beh[1])) +
+  scale_fill_manual(values = c(color_beh[4], color_beh[2], color_beh[1])) +
+  guides(
+    color = guide_legend(
+      override.aes = list(fill = c(color_beh[4], color_beh[2], color_beh[1]))
+    ),
+    fill = "none"
   ) +
   theme_linedraw()
 
 #Plot genetic vs geographic distance for S2
 ggplot(
   Dch_gen_geo_dists_all |> filter(timepoint == "s2"),
-  aes(x = geo_diff_km, y = value)
+  aes(x = geo_diff_km, y = value, color = relationship)
 ) +
   geom_point() +
-  stat_smooth(method = "lm", aes(fill = timepoint), alpha = 0.3) +
+  stat_smooth(method = "lm", aes(fill = relationship), alpha = 0.3) +
   labs(
     title = "Genetic (Dch) vs Geographic distance (S2)",
     x = "Distance (km)",
     y = "Cavalli-Sforza & Edwards chord distance"
+  ) +
+  scale_color_manual(values = c(color_beh[4], color_beh[2], color_beh[1])) +
+  scale_fill_manual(values = c(color_beh[4], color_beh[2], color_beh[1])) +
+  guides(
+    color = guide_legend(
+      override.aes = list(fill = c(color_beh[4], color_beh[2], color_beh[1]))
+    ),
+    fill = "none"
   ) +
   theme_linedraw()
 
@@ -1039,6 +1069,7 @@ Tajima_Wilcox_time <- compare_means(
   p.adjust.method = "BH"
 )
 
+# Allelic Richness
 
 # Allele sharing distance / genetic distance via pegas
 gen_loci2 <- genind2loci(gen)
@@ -1101,7 +1132,6 @@ for (i in 1:length(pop_names)) {
     asd_pop_mat[i, j] <- mean(asd_mat[inds_i, inds_j], na.rm = TRUE)
   }
 }
-color_beh <- c("#56B4E9", "#E69F00", "#8F7EE5", "#009E73", "lightgrey")
 # Build and plot tree
 asd_pop_dist <- as.dist(asd_pop_mat)
 asd_tree <- nj(asd_pop_dist)
