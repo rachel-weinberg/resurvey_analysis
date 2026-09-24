@@ -1070,6 +1070,80 @@ Tajima_Wilcox_time <- compare_means(
 )
 
 # Allelic Richness
+AR_all <- allelic.richness(HS_loci)
+
+HS_loci_beh <- HS_loci |> mutate(pop = str_replace(pop, "_[A-Z]+_", "_"))
+
+AR_beh_time <- allelic.richness(HS_loci_beh)
+
+
+AR_beh_df <- AR_beh_time$Ar |>
+  pivot_longer(cols = everything(), names_to = "pop", values_to = "Ar") |>
+  mutate(
+    timepoint = str_extract(pop, "s[0-9]"),
+    behavior = str_extract(pop, "[^_]+(?=_)")
+  )
+
+
+#Convert AR_s1 to long format to plot boxplot with ggpolot2
+pop_pattern <- "(?<=_)[^_]+(?=_)"
+AR_df <- AR_all$Ar |>
+  pivot_longer(cols = everything(), names_to = "pop", values_to = "Ar") |>
+  mutate(
+    timepoint = str_extract(pop, "s[0-9]"),
+    loc = str_extract(pop, pop_pattern),
+    behavior = str_extract(pop, "[^_]+(?=_)")
+  )
+
+
+AR_summary_beh <- AR_beh_df |>
+  group_by(timepoint, behavior) |>
+  summarise(mean_AR = mean(Ar), n_sites = n(), sd_ar = sd(Ar))
+
+AR_test_between_sites <- compare_means(
+  Ar ~ loc,
+  data = AR_df,
+  method = "wilcox.test",
+  paired = T,
+  group.by = "timepoint",
+  p.adjust.method = "BH"
+) |>
+  mutate(
+    significance = case_when(
+      p.adj <= 0.0001 ~ "****",
+      p.adj <= 0.001 ~ "***",
+      p.adj <= 0.01 ~ "**",
+      p.adj <= 0.05 ~ "*",
+      TRUE ~ "ns"
+    )
+  )
+
+Ar_test_between_cols <- compare_means(
+  Ar ~ behavior,
+  data = AR_df,
+  method = "wilcox.test",
+  paired = F,
+  group.by = "timepoint",
+  p.adjust.method = "BH"
+) |>
+  mutate(
+    significance = case_when(
+      p.adj <= 0.0001 ~ "****",
+      p.adj <= 0.001 ~ "***",
+      p.adj <= 0.01 ~ "**",
+      p.adj <= 0.05 ~ "*",
+      TRUE ~ "ns"
+    )
+  )
+
+AR_test_timepoint <- compare_means(
+  Ar ~ timepoint,
+  data = AR_beh_df,
+  method = "wilcox.test",
+  group.by = "behavior",
+  p.adjust.method = "BH"
+)
+
 
 # Allele sharing distance / genetic distance via pegas
 gen_loci2 <- genind2loci(gen)
