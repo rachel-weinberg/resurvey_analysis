@@ -35,7 +35,19 @@ pacman::p_load(
 set.seed(123)
 
 #plot colors
-color_beh <- c("#56B4E9", "#E69F00", "#8F7EE5", "#009E73", "lightgrey")
+color_beh <- c("#1F78B4", "#FF7F00", "#33A02C", "#6A3D9A", "#B3B3B3")
+color_beh_2 <- c("#A6CEE3", "#FDBF6F", "#B2DF8A", "#CAB2D6", "#B15928")
+timepoint_colors <- c(
+  color_beh[1],
+  color_beh_2[1],
+  color_beh[2],
+  color_beh_2[2],
+  color_beh[3],
+  color_beh_2[4],
+  color_beh[4]
+)
+
+col_s1_v_s2 <- c("#E1BE6A", "#40B0A6")
 
 
 #Folder with vcftools popgen results
@@ -319,20 +331,6 @@ vcf_samples_df <- vcf_samples |>
     (pop == "LS23") ~ "LS_s2"
   ))
 
-#write beh/timepoint tsv
-write_delim(
-  vcf_samples_df[, c(1, 3)],
-  "popgen_analysis/pixy_popmap_beh_time.tsv",
-  delim = "\t",
-  col_names = F
-)
-#write site/timepoint tsv
-write_delim(
-  vcf_samples_df[, 1:2],
-  "popgen_analysis/pixy_popmap_site_time.tsv",
-  delim = "\t",
-  col_names = F
-)
 
 ### FUNCTIONS ###
 
@@ -1290,24 +1288,21 @@ agg <- function(path, by = c("pop", "chromosome")) {
     mutate(pi = diffs / comps)
 }
 
-groupings <- c("beh", "site")
+groupings <- c("site", "beh")
 pinpis <- map_dfr(groupings, function(grp) {
   pi0 <- agg(sprintf(
-    "popgen_analysis/pixy_results/pixy_zerofold_%s/zerofold_%s_pi.txt",
+    "popgen_analysis/pixy_results_indv_filt/pixy_zerofold_%s/zerofold_%s_pi.txt",
     grp,
     grp
   )) |>
     select(pop, chromosome, pi0 = pi)
   pi4 <- agg(sprintf(
-    "popgen_analysis/pixy_results/pixy_fourfold_%s/fourfold_%s_pi.txt",
+    "popgen_analysis/pixy_results_indv_filt/pixy_fourfold_%s/fourfold_%s_pi.txt",
     grp,
     grp
   )) |>
     select(pop, chromosome, pi4 = pi)
-  full_join(pi0, pi4, by = c("pop", "chromosome"))
-
-  pinpis_site <- pinpis |>
-    filter(grouping == "site") |>
+  full_join(pi0, pi4, by = c("pop", "chromosome")) |>
     mutate(
       grouping = grp,
       piN_piS = pi0 / pi4,
@@ -1325,6 +1320,7 @@ pinpis <- map_dfr(groupings, function(grp) {
 })
 
 #by site
+
 ggplot(
   data = pinpis |>
     filter(grouping == "site", !is.na(piN_piS)) |>
@@ -1343,15 +1339,27 @@ ggplot(
 
 #stats by beh group
 real_sites <- pinpis |>
-  filter(grouping == "beh", !is.na(piN_piS), !is.infinite(piN_piS)) |>
+  filter(grouping == "site", !is.na(piN_piS), !is.infinite(piN_piS)) |>
   group_by(beh_tp) |>
   summarise(
     mean_piN_piS = mean(piN_piS),
     median_piN_piS = median(piN_piS),
+    n_sites = n(),
     .groups = "drop"
   )
+
+stats_by_pop <- pinpis |>
+  filter(grouping == "site", is.finite(piN_piS)) |>
+  group_by(pop) |>
+  summarise(
+    n_zerofold = sum(pi0 > 0, na.rm = TRUE),
+    n_fourfold = sum(pi4 > 0, na.rm = TRUE),
+    n_sites = n(),
+    .groups = "drop"
+  )
+
 pinpis |>
-  filter(grouping == "beh", !is.na(piN_piS), !is.infinite(piN_piS)) |>
+  filter(grouping == "site", piN_piS > 0) |>
   group_by(beh_tp) |>
   ggplot(aes(x = beh_tp, y = piN_piS, color = beh_tp)) +
   geom_boxplot() +
@@ -1362,14 +1370,24 @@ pinpis |>
 pinpis_anova <- aov(
   piN_piS ~ beh_tp,
   data = pinpis |>
-    filter(grouping == "beh", !is.na(piN_piS), !is.infinite(piN_piS))
+    filter(
+      grouping == "site",
+      !is.na(piN_piS),
+      !is.infinite(piN_piS),
+      piN_piS > 0
+    )
 )
 summary(pinpis_anova)
 
 pinpis_wilcox <- compare_means(
   piN_piS ~ beh_tp,
   data = pinpis |>
-    filter(grouping == "beh", !is.na(piN_piS), !is.infinite(piN_piS)),
+    filter(
+      grouping == "site",
+      !is.na(piN_piS),
+      !is.infinite(piN_piS),
+      piN_piS > 0
+    ),
   method = "wilcox.test",
   paired = F,
   p.adjust.method = "BH"
@@ -1386,10 +1404,16 @@ pinpis_wilcox <- pinpis_wilcox |>
     )
   )
 
+#plot sites only
 pinpis |>
-  filter(grouping == "beh", !is.na(piN_piS), !is.infinite(piN_piS)) |>
+  filter(
+    grouping == "site",
+    !is.na(piN_piS),
+    !is.infinite(piN_piS),
+    piN_piS > 0
+  ) |>
   group_by(beh_tp) |>
-  ggplot(aes(x = beh_tp, y = piN_piS, color = beh_tp)) +
+  ggplot(aes(x = pop, y = piN_piS, color = beh_tp)) +
   geom_boxplot() +
   theme_linedraw() +
   ylim(0, 2.2) +
@@ -1423,48 +1447,98 @@ pinpis_cld <- multcompView::multcompLetters(
   enframe(name = "beh_tp", value = "letter")
 
 pinpis |>
-  filter(grouping == "beh", is.finite(piN_piS)) |>
-  ggplot(aes(x = beh_tp, y = piN_piS, color = beh_tp)) +
+  filter(grouping == "site", is.finite(piN_piS)) |>
+  arrange(beh_tp, pop) |>
+  mutate(pop = factor(pop, levels = unique(pop))) |>
+  ggplot(aes(x = pop, y = piN_piS, color = beh_tp)) +
   geom_boxplot() +
-  geom_text(
-    data = pinpis_cld,
-    aes(x = beh_tp, y = 2.1, label = letter),
-    inherit.aes = FALSE
-  ) +
   coord_cartesian(ylim = c(0, 2.2)) +
   theme_linedraw() +
   theme(axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1)) +
-  scale_color_manual(values = c(color_beh[4], color_beh[2], color_beh[1]))
+  scale_color_manual(
+    values = c(
+      timepoint_colors[4],
+      timepoint_colors[3],
+      timepoint_colors[6],
+      timepoint_colors[1],
+      timepoint_colors[7],
+      "#a2dd9d",
+      timepoint_colors[5]
+    )
+  )
 
+#wilcox test by beh group
+wilcox_beh <- compare_means(
+  piN_piS ~ pop,
+  data = pinpis |>
+    filter(
+      grouping == "beh",
+      !is.na(piN_piS),
+      !is.infinite(piN_piS),
+      piN_piS > 0
+    ),
+  method = "wilcox.test",
+  paired = F,
+  p.adjust.method = "BH"
+)
+beh_p <- setNames(
+  wilcox_beh$p.adj,
+  paste(wilcox_beh$group1, wilcox_beh$group2, sep = "-")
+)
+beh_cld <- multcompView::multcompLetters(
+  beh_p,
+  threshold = 0.05
+)$Letters |>
+  enframe(name = "pop", value = "letter")
+
+
+#set beh order
+beh_order <- c(
+  "LH_s1",
+  "LH_s2",
+  "LH_s2_changed",
+  "LSC_changed_s1",
+  "LSC_unchanged_s1",
+  "LSC_s2",
+  "LS_s1",
+  "LS_s2"
+)
 
 #by beh group
 ggplot(
   data = pinpis |>
-    filter(grouping == "beh", !is.na(piN_piS)) |>
+    filter(grouping == "beh", is.finite(piN_piS)) |>
     arrange(pop) |>
-    mutate(pop = factor(pop, levels = unique(pop))),
+    mutate(pop = factor(pop, levels = beh_order)),
   aes(x = pop, y = piN_piS, color = pop)
 ) +
+  coord_cartesian(ylim = c(0, 2.5)) +
   geom_boxplot() +
-  labs(
-    title = "piN/piS by grouping",
-    x = "Grouping",
-    y = "piN/piS"
-  ) +
-  theme_linedraw() +
-  theme(axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1))
-
-pinpis %>%
-  arrange(beh_tp, pop) %>%
-  mutate(pop = factor(pop, levels = unique(pop))) %>%
-  ggplot(aes(x = pop, y = piN_piS, color = beh_tp)) +
   geom_point() +
+  geom_text(
+    data = beh_cld,
+    aes(x = pop, y = 2.4, label = letter),
+    inherit.aes = FALSE
+  ) +
   labs(
-    title = "piN/piS by grouping",
+    title = "piN/piS by colony",
     x = "Grouping",
     y = "piN/piS"
   ) +
   theme_linedraw() +
-  theme(axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1))
+  theme(axis.text.x = element_text(angle = 45, hjust = 1, vjust = 1)) +
+  scale_color_manual(
+    values = c(
+      timepoint_colors[4],
+      timepoint_colors[3],
+      timepoint_colors[7],
+      timepoint_colors[6],
+      timepoint_colors[2],
+      timepoint_colors[1],
+      "#a2dd9d",
+      timepoint_colors[5]
+    )
+  )
+
 
 write_csv(pinpis, "piN_piS_by_group.csv")
